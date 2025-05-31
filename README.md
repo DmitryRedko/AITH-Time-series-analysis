@@ -147,7 +147,97 @@ toolkit.yeojohnson_transform('cnt')
 toolkit.fit(col='yeojohnson_cnt', model_type='sarimax', order=(1,1,1))
 preds = toolkit.predict(steps=30)
 toolkit.evaluate_forecast(y_true, preds)
-toolkit.check_residuals(plot=True)
+toolkit.check_residuals()
 ```
 
 ---
+
+## Обёртки моделей
+
+### `ETSWrapper`
+
+Обёртка для модели экспоненциального сглаживания (Exponential Smoothing, Holt-Winters).
+
+**Параметры и поведение:**
+
+* `trend`, `seasonal`, `seasonal_periods`, `damped_trend`: параметры модели, как в `ExponentialSmoothing`
+* `auto_fit_mode`: если True, автоматически подбираются параметры по метрике (по умолчанию AIC)
+* `auto_fit_seasonal_periods_candidates`: список кандидатов для автоподбора периодов сезонности
+* `trends`, `seasonals`, `damped_opts`: список возможных вариантов для автоподбора
+* `metric`: метрика оптимизации (`aic`, `bic`, `hqic` и т.д.)
+* `verbose`: флаг логирования в процессе автоподбора
+
+**Методы:**
+
+* `fit(y)`: обучение модели; при `auto_fit_mode=True` запускает перебор конфигураций
+* `predict(steps)`: прогноз на `steps` шагов вперёд
+* `save(path)`: сохранение обученной модели с помощью `joblib`
+* `load(path)`: загрузка модели из файла
+
+**Примечание:** при автоподборе выводится лучшая конфигурация и её значение метрики.
+
+### `ProphetWrapper`
+
+Обёртка для модели Prophet от Facebook/Meta.
+
+**Параметры:**
+
+* Все параметры инициализации соответствуют Prophet (growth, seasonality, holidays, changepoints и др.)
+* `exog`: список дополнительных регрессоров
+* `custom_seasonalities`: возможность задать пользовательские сезонности
+
+**Методы:**
+
+* `fit(y, exog=None)`: обучение модели, включая регрессоры (если заданы)
+* `predict(steps, exog_predict=None)`: прогноз на `steps` шагов вперёд с учётом регрессоров
+* `save(path)`: сохранение модели с помощью `joblib`
+* `load(path)`: загрузка модели из файла и восстановление состояния
+
+**Примечание:**
+
+* Регрессоры должны присутствовать как при обучении, так и при прогнозировании
+* Метод `predict` возвращает только значения прогноза `yhat`
+
+### `SARIMAXWrapper`
+
+Обёртка для модели SARIMAX из `statsmodels`.
+
+**Параметры:**
+
+* `order`: параметры ARIMA (p,d,q)
+* `seasonal_order`: сезонные параметры (P,D,Q,s)
+* `exog`: внешние регрессоры
+* `enforce_stationarity`: требовать ли стационарность модели
+* `enforce_invertibility`: требовать ли инвертируемость
+* `simple_differencing`: использовать ли простое дифференцирование
+
+**Методы:**
+
+* `fit(y)`: обучение модели
+* `predict(steps, exog=None)`: прогноз на `steps` шагов вперёд; можно передать внешние регрессоры
+* `save(path)`: сохранение модели с помощью `joblib`
+* `load(path)`: загрузка модели из файла
+
+### `BoostingWrapper`
+
+Обёртка для модели градиентного бустинга на основе LightGBM.
+
+**Параметры:**
+
+* `params`: словарь параметров LightGBM (по умолчанию — регрессия с RMSE)
+* `num_boost_round`: количество итераций бустинга
+* `early_stopping_rounds`: количество итераций без улучшения на валидации до остановки
+* `verbose_eval`: логировать ли процесс обучения
+
+**Методы:**
+
+* `fit(y, exog=None, val_data=None)`: обучение модели; можно передать валидационные данные `(X_val, y_val)` для ранней остановки
+* `predict(steps, exog=None)`: прогноз на `steps` шагов вперёд (обязателен `exog`, если использовался при обучении)
+* `save(path)`: сохранение модели и данных с помощью `joblib`
+* `load(path)`: загрузка модели и восстановление состояния
+
+**Примечание:**
+
+* `exog` должен быть передан как при обучении, так и при прогнозировании, если он использовался
+* `predict` возвращает значения прогноза в виде `pd.Series`
+
