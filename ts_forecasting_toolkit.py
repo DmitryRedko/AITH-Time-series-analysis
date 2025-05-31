@@ -374,10 +374,7 @@ class TimeSeriesForecastingToolkit:
                 forecast_train = self.model.model.predict(df_train)
                 residuals = df_train['y'] - forecast_train['yhat']
             elif isinstance(self.model, BoostingWrapper) and self.model.fitted:
-                if self.model.train_target is None or self.model.train_exog is None:
-                    raise ValueError("Невозможно получить остатки: отсутствуют train_target или train_exog")
-                y_pred = self.model.predict(steps=len(self.model.train_target), exog=self.model.train_exog)
-                residuals = np.array(self.model.train_target) - np.array(y_pred)
+                residuals = self.model.residuals
             else:
                 raise ValueError("Остатки недоступны для данной модели")
         else:
